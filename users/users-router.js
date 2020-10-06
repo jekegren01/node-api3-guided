@@ -1,6 +1,7 @@
 const express = require("express")
 const users = require("./users-model")
-
+const { checkUserID, checkUserData } = require('../middleware/user')
+const { orWhereNotExists } = require("../data/config")
 const router = express.Router()
 
 router.get("/users", (req, res) => {
@@ -14,57 +15,67 @@ router.get("/users", (req, res) => {
 			res.status(200).json(users)
 		})
 		.catch((error) => {
-			console.log(error)
-			res.status(500).json({
-				message: "Error retrieving the users",
-			})
+
+			// calling next with a parameter moves to the error middleware
+			// at the end of the middleware stack
+
+			next(error)
+
+			//remove below code and replace with the error handler
+			// console.log(error)
+			// res.status(500).json({
+			// 	message: "Error retrieving the users",
+			// })
 		})
 })
 
-router.get("/users/:id", (req, res) => {
-	users.findById(req.params.id)
-		.then((user) => {
-			if (user) {
-				res.status(200).json(user)
-			} else {
-				res.status(404).json({
-					message: "User not found",
-				})
-			}
-		})
-		.catch((error) => {
-			console.log(error)
-			res.status(500).json({
-				message: "Error retrieving the user",
-			})
-		})
+router.get("/users/:id", checkUserID(), (req, res) => {
+
+	// you can now take out anything that was put into the middleware function
+	  
+	// users.findById(req.params.id)
+	// 	.then((user) => {
+	// 		if (user) {     // now users is not defined, so we need to access it
+							// look to middleware User to see => req.user = user
+				res.status(200).json(req.user)
+		// 	} else {
+		// 		res.status(404).json({
+		// 			message: "User not found",
+		// 		})
+		// 	}
+		// })
+		// .catch((error) => {
+		// 	console.log(error)
+		// 	res.status(500).json({
+		// 		message: "Error retrieving the user",
+		// 	})
+		// })
 })
 
-router.post("/users", (req, res) => {
-	if (!req.body.name || !req.body.email) {
-		return res.status(400).json({
-			message: "Missing user name or email",
-		})
-	}
+router.post("/users", checkUserData(), (req, res) => {
+	// you can now remove the function that was moved to middleware
+	// if (!req.body.name || !req.body.email) {
+	// 	return res.status(400).json({
+	// 		message: "Missing user name or email",
+	// 	})
+	// }
 
 	users.add(req.body)
 		.then((user) => {
 			res.status(201).json(user)
 		})
 		.catch((error) => {
-			console.log(error)
-			res.status(500).json({
-				message: "Error adding the user",
-			})
+			next(error)
 		})
 })
 
-router.put("/users/:id", (req, res) => {
-	if (!req.body.name || !req.body.email) {
-		return res.status(400).json({
-			message: "Missing user name or email",
-		})
-	}
+router.put("/users/:id", checkUserData(), checkUserID(), (req, res) => {
+	// you can now remove the function that was moved to middleware
+	// if (!req.body.name || !req.body.email) {
+	// 	return res.status(400).json({
+	// 		message: "Missing user name or email",
+	// 	})
+	// }
 
 	users.update(req.params.id, req.body)
 		.then((user) => {
@@ -77,14 +88,11 @@ router.put("/users/:id", (req, res) => {
 			}
 		})
 		.catch((error) => {
-			console.log(error)
-			res.status(500).json({
-				message: "Error updating the user",
-			})
+			next(error)
 		})
 })
 
-router.delete("/users/:id", (req, res) => {
+router.delete("/users/:id", checkUserID(), (req, res) => {
 	users.remove(req.params.id)
 		.then((count) => {
 			if (count > 0) {
@@ -98,27 +106,21 @@ router.delete("/users/:id", (req, res) => {
 			}
 		})
 		.catch((error) => {
-			console.log(error)
-			res.status(500).json({
-				message: "Error removing the user",
-			})
+			next(error)
 		})
 })
 
-router.get("/users/:id/posts", (req, res) => {
+router.get("/users/:id/posts", checkUserID(), (req, res) => {
 	users.findUserPosts(req.params.id)
 		.then((posts) => {
 			res.status(200).json(posts)
 		})
 		.catch((error) => {
-			console.log(error)
-			res.status(500).json({
-				message: "Could not get user posts",
-			})
+			next(error)
 		})
 })
 
-router.get("/users/:id/posts/:postId", (req, res) => {
+router.get("/users/:id/posts/:postId", checkUserID(), (req, res) => {
 	users.findUserPostById(req.params.id, req.params.postId)
 		.then((post) => {
 			if (post) {
@@ -130,14 +132,11 @@ router.get("/users/:id/posts/:postId", (req, res) => {
 			}
 		})
 		.catch((error) => {
-			console.log(error)
-			res.status(500).json({
-				message: "Could not get user post",
-			})
+			next(error)
 		})
 })
 
-router.post("/users/:id/posts", (req, res) => {
+router.post("/users/:id/posts", checkUserID(), (req, res) => {
 	if (!req.body.text) {
 		return res.status(400).json({
 			message: "Need a value for text",
@@ -149,10 +148,10 @@ router.post("/users/:id/posts", (req, res) => {
 			res.status(201).json(post)
 		})
 		.catch((error) => {
-			console.log(error)
-			res.status(500).json({
-				message: "Could not create user post",
-			})
+			next(error)
+
+			// an way to write this even shorter
+			//  .catch(next)
 		})
 })
 
